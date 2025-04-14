@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Electo {
 
-    // Clase Voto
+    
     static class Voto {
         private int id;
         private String rutVotante;
