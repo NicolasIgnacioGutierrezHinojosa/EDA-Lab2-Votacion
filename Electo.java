@@ -353,4 +353,41 @@ public class Electo {
     }
 }
 
+static class Voto {
+    private int id;                 // 4 bytes
+    private long rutVotante;        // 8 bytes (almacenar 123456789 en lugar de "12.345.678-9")
+    private short codigoPartido;    // 2 bytes (por ejemplo, codificar "A25B12" como un número)
+    private long timestamp;         // 8 bytes (almacenar segundos desde medianoche)
 
+    public Voto(int id, long rutVotante, short codigoPartido) {
+        this.id = id;
+        this.rutVotante = rutVotante;
+        this.codigoPartido = codigoPartido;
+        this.timestamp = System.currentTimeMillis() / 1000; // Almacena segundos desde la época
+    }
+
+    public int getId() { return id; }
+    public long getRutVotante() { return rutVotante; }
+    public short getCodigoPartido() { return codigoPartido; }
+    public long getTimestamp() { return timestamp; }
+
+    // Método para reconstruir el RUT con formato
+    public String getRutVotanteFormatted() {
+        String rut = String.valueOf(rutVotante);
+        return rut.substring(0, 2) + "." + rut.substring(2, 5) + "." + rut.substring(5, 8) + "-" + rut.charAt(rut.length() - 1);
+    }
+
+    // Método para convertir timestamp a formato HH:MM:SS
+    public String getTimestampFormatted() {
+        long hours = (timestamp / 3600) % 24;
+        long minutes = (timestamp / 60) % 60;
+        long seconds = timestamp % 60;
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    }
+
+    @Override
+    public String toString() {
+        return "Voto{id=" + id + ", rut='" + getRutVotanteFormatted() + "', partido='" + codigoPartido +
+                "', hora='" + getTimestampFormatted() + "'}";
+    }
+}
