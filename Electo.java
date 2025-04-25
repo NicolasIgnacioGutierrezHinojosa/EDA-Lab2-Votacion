@@ -1,4 +1,3 @@
-//En este codigo ningun animal ha sido maltratado y ningun do while ha sido utilizado//
 import java.time.LocalTime;
 import java.util.*;
 
@@ -18,13 +17,37 @@ public class Electo {
             this.timestamp = LocalTime.now().toString();
         }
 
-        public int getId() { return id; }
-        public String getRutVotante() { return rutVotante; }
-        public String getCodigoPartido() { return codigoPartido; }
-        public String getTimestamp() { return timestamp; }
+        public int getId() {
+            return id;
+        }
 
+        public String getRutVotante() {
+            return rutVotante;
+        }
+
+        public String getCodigoPartido() {
+            return codigoPartido;
+        }
+
+        public String getTimestamp() {
+            return timestamp;
+        }
+
+        @Override
         public String toString() {
-            return "Voto{id=" + id + ", rut='" + rutVotante + "', partido='" + codigoPartido + "', hora='" + timestamp + "'}";
+            return "Voto{id=" + id +
+                    ", rut='" + rutVotante +
+                    "', partido='" + codigoPartido +
+                    "', hora='" + timestamp + "'}";
+        }
+
+        public byte[] toBytes() {
+            byte[] rutBytes = rutVotante.getBytes();
+            byte[] partBytes = codigoPartido.getBytes();
+            byte[] result = new byte[64];
+            System.arraycopy(rutBytes, 0, result, 0, Math.min(32, rutBytes.length));
+            System.arraycopy(partBytes, 0, result, 32, Math.min(32, partBytes.length));
+            return result;
         }
     }
 
@@ -32,27 +55,38 @@ public class Electo {
     static class Candidato {
         private int id;
         private String nombre;
-        private String partido;
-        private Queue<Voto> votosRecibidos;
+        private String partido; // ej: "A25"
+        private Queue<Voto> votosRecibidos = new LinkedList<>();
 
         public Candidato(int id, String nombre, String partido) {
             this.id = id;
             this.nombre = nombre;
             this.partido = partido;
-            this.votosRecibidos = new LinkedList<>();
         }
 
-        public int getId() { return id; }
-        public String getNombre() { return nombre; }
-        public String getPartido() { return partido; }
-        public Queue<Voto> getVotosRecibidos() { return votosRecibidos; }
+        public int getId() {
+            return id;
+        }
+
+        public String getNombre() {
+            return nombre;
+        }
+
+        public String getPartido() {
+            return partido;
+        }
+
+        public Queue<Voto> getVotosRecibidos() {
+            return votosRecibidos;
+        }
 
         public void agregarVoto(Voto v) {
             votosRecibidos.add(v);
         }
 
+        @Override
         public String toString() {
-            return id + ". " + nombre + " (Código de Partido: " + partido + ")";
+            return id + ". " + nombre + " (Partido: " + partido + ")";
         }
     }
 
@@ -60,148 +94,142 @@ public class Electo {
     static class Votante {
         private String rut;
         private String nombre;
-        private boolean yaVoto;
-        private String codigoVotacion;
+        private boolean yaVoto = false;
+        private String codigoVotacion = generarCodigoCorto(6);
 
         public Votante(String rut, String nombre) {
             this.rut = rut;
             this.nombre = nombre;
-            this.yaVoto = false;
-            this.codigoVotacion = generarCodigoCorto(6);
         }
 
-
-        private String generarCodigoCorto(int length) {
+        private static String generarCodigoCorto(int length) {
             String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            Random random = new Random();
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < length; i++){
-                sb.append(chars.charAt(random.nextInt(chars.length())));
+            Random rnd = new Random();
+            StringBuilder sb = new StringBuilder(length);
+            for (int i = 0; i < length; i++) {
+                sb.append(chars.charAt(rnd.nextInt(chars.length())));
             }
             return sb.toString();
         }
 
-        public String getRut() { return rut; }
-        public String getNombre() { return nombre; }
-        public boolean yaVoto() { return yaVoto; }
+        public String getRut() {
+            return rut;
+        }
+
+        public String getNombre() {
+            return nombre;
+        }
+
+        public boolean yaVoto() {
+            return yaVoto;
+        }
+
+        public String getCodigoVotacion() {
+            return codigoVotacion;
+        }
 
         public void marcarVotado(String nuevoCodigo) {
-            yaVoto = true;
+            this.yaVoto = true;
             this.codigoVotacion = nuevoCodigo;
         }
-        public String getCodigoVotacion() { return codigoVotacion; }
 
+        @Override
         public String toString() {
-            return nombre + " (RUT: " + rut + ") - Código de votación: " + codigoVotacion;
+            return nombre + " (RUT: " + rut + ") - Código: " + codigoVotacion + " - Ya votó: " + yaVoto;
         }
     }
 
 
     static class UrnaElectoral {
-        private LinkedList<Candidato> listaCandidatos;
-        private Stack<Voto> historialVotos;
-        private Queue<Voto> votosReportados;
-        private int idCounter;
-        private Map<String, Votante> votantesRegistrados;
+        private List<Candidato> listaCandidatos = new ArrayList<>();
+        private Stack<Voto> historialVotos = new Stack<>();
+        private Queue<Voto> votosReportados = new LinkedList<>();
+        private Map<String, Votante> votantesRegistrados = new HashMap<>();
+        private boolean urnasCerradas = false;
+        private int idCounter = 1;
 
-        private List<Votante> noVotaron;
-        private List<Votante> votaron;
-        private boolean urnasCerradas;
-        private Random random;
-
-        public UrnaElectoral() {
-            this.listaCandidatos = new LinkedList<>();
-            this.historialVotos = new Stack<>();
-            this.votosReportados = new LinkedList<>();
-            this.votantesRegistrados = new HashMap<>();
-            this.noVotaron = new ArrayList<>();
-            this.votaron = new ArrayList<>();
-            this.idCounter = 1;
-            this.urnasCerradas = false;
-            this.random = new Random();
+        private static String generarCodigoCorto(int length) {
+            return Votante.generarCodigoCorto(length);
         }
-
 
         public void agregarCandidato(Candidato c) {
             listaCandidatos.add(c);
+            System.out.println(" Candidato agregado: " + c);
         }
 
-
         public void registrarVotante(Votante v) {
-            if(votantesRegistrados.containsKey(v.getRut())) {
+            if (votantesRegistrados.containsKey(v.getRut())) {
                 System.out.println(" El votante ya está registrado.");
                 return;
             }
             votantesRegistrados.put(v.getRut(), v);
-            noVotaron.add(v);
-            System.out.println(" Votante registrado: " + v.getNombre() + " (RUT: " + v.getRut() + ") - Código de votación: " + v.getCodigoVotacion());
+            System.out.println(" Votante registrado: " + v.getNombre() +
+                    " - Código de votación: " + v.getCodigoVotacion());
         }
 
-
-        public boolean verificarVotante(String rut) {
+        private boolean verificarVotante(String rut) {
             if (urnasCerradas) {
-                System.out.println(" Las urnas están cerradas.");
+                System.out.println("️ Las urnas están cerradas.");
                 return false;
             }
             Votante v = votantesRegistrados.get(rut);
-            return v != null && !v.yaVoto();
+            if (v == null) {
+                System.out.println(" Votante no registrado.");
+                return false;
+            }
+            if (v.yaVoto()) {
+                System.out.println(" El votante ya emitió su voto.");
+                return false;
+            }
+            return true;
         }
-
 
         private Candidato buscarCandidatoPorCodigo(String codigo) {
             for (Candidato c : listaCandidatos) {
-                if (c.getPartido().equalsIgnoreCase(codigo)) {
-                    return c;
-                }
+                if (c.getPartido().equalsIgnoreCase(codigo)) return c;
             }
             return null;
         }
 
-
         public boolean registrarVoto(String rutVotante, String codigoPartido) {
-
-            if (LocalTime.now().isAfter(LocalTime.of(22, 0))) {
-                urnasCerradas = true;
-                System.out.println(" Se han cerrado las urnas por la hora (>= 18:00).");
+            if (LocalTime.now().isAfter(LocalTime.of(18, 0))) {
+                cerrarUrnas();
                 return false;
             }
-            if (!verificarVotante(rutVotante))
-                return false;
-            Votante votante = votantesRegistrados.get(rutVotante);
+            if (!verificarVotante(rutVotante)) return false;
+
             Candidato candidato = buscarCandidatoPorCodigo(codigoPartido);
-            if (candidato == null)
+            if (candidato == null) {
+                System.out.println(" Código de partido no válido.");
                 return false;
+            }
+
             Voto voto = new Voto(idCounter++, rutVotante, codigoPartido);
             candidato.agregarVoto(voto);
             historialVotos.push(voto);
 
+            Votante votante = votantesRegistrados.get(rutVotante);
             String nuevoCodigo = generarCodigoCorto(6);
             votante.marcarVotado(nuevoCodigo);
 
-            noVotaron.remove(votante);
-            votaron.add(votante);
-            System.out.println(" Voto registrado exitosamente. Tu nuevo código de votación es: " + nuevoCodigo);
+            System.out.println(" Voto registrado. Tu nuevo código: " + nuevoCodigo);
             return true;
         }
 
-
-        private String generarCodigoCorto(int length) {
-            String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < length; i++){
-                sb.append(chars.charAt(random.nextInt(chars.length())));
-            }
-            return sb.toString();
+        public void cerrarUrnas() {
+            urnasCerradas = true;
+            System.out.println(" Urnas cerradas.");
+            mostrarVotantesQueNoVotaron();
+            mostrarMultasPorNoVotar();
         }
-
 
         public boolean reportarVoto(String codigoVotacion) {
             for (Candidato c : listaCandidatos) {
                 Iterator<Voto> it = c.getVotosRecibidos().iterator();
                 while (it.hasNext()) {
                     Voto v = it.next();
-                    Votante votante = votantesRegistrados.get(v.getRutVotante());
-                    if (votante != null && codigoVotacion.equals(votante.getCodigoVotacion())) {
+                    Votante vt = votantesRegistrados.get(v.getRutVotante());
+                    if (vt != null && vt.getCodigoVotacion().equals(codigoVotacion)) {
                         votosReportados.add(v);
                         it.remove();
                         System.out.println(" Voto reportado exitosamente.");
@@ -213,118 +241,93 @@ public class Electo {
             return false;
         }
 
+        public void mostrarMultasPorNoVotar() {
+            System.out.println("\n Usuarios reportados por no votar:");
+            for (Votante v : votantesRegistrados.values()) {
+                if (!v.yaVoto()) {
+                    System.out.println("- " + v.getNombre() + " (RUT: " + v.getRut() + ") - Multa asignada");
+                }
+            }
+        }
+
+        public void mostrarVotantesQueNoVotaron() {
+            System.out.println("\n Votantes que NO votaron:");
+            for (Votante v : votantesRegistrados.values()) {
+                if (!v.yaVoto()) {
+                    System.out.println("- " + v.getNombre() + " (RUT: " + v.getRut() + ")");
+                }
+            }
+        }
 
         public void mostrarResultados() {
             System.out.println("\n Resultados:");
             for (Candidato c : listaCandidatos) {
-                int total = 0;
-                for (Voto v : c.getVotosRecibidos()) {
-                    if (v.getCodigoPartido().equalsIgnoreCase(c.getPartido())) {
-                        total++;
-                    }
-                }
-                System.out.println(c.getNombre() + " (" + c.getPartido() + "): " + total + " voto(s)");
+                System.out.println(c.getNombre() + " (" + c.getPartido() + "): " +
+                        c.getVotosRecibidos().size() + " voto(s)");
             }
         }
-        public Map<String, Integer> obtenerResultados() {
-            Map<String, Integer> resultados = new HashMap<>();
-            for (Candidato c : listaCandidatos) {
-                resultados.put(c.getNombre(), c.getVotosRecibidos().size());
-            }
-            return resultados;
-        }
-
-
 
         public void mostrarHistorial() {
             System.out.println("\n Historial de votos (últimos primero):");
-            for (Voto v : historialVotos) {
-                System.out.println(v);
-            }
+            for (Voto v : historialVotos) System.out.println(v);
         }
-
 
         public void mostrarVotantesQueVotaron() {
             System.out.println("\n Votantes que ya votaron:");
-            if (votaron.isEmpty()) {
-                System.out.println("Nadie ha votado aún.");
-                return;
+            for (Votante v : votantesRegistrados.values()) {
+                if (v.yaVoto()) {
+                    System.out.println("- " + v.getNombre() + " (RUT: " + v.getRut() + ")");
+                }
             }
-            for (Votante v : votaron) {
-                System.out.println(v);
-            }
-        }
-
-
-        public void mostrarVotantesQueNoVotaron() {
-            System.out.println("\n Votantes que no han votado:");
-            if (noVotaron.isEmpty()) {
-                System.out.println("Todos han votado.");
-                return;
-            }
-            for (Votante v : noVotaron) {
-                System.out.println(v);
-            }
-        }
-
-
-        public void cerrarUrnas() {
-            urnasCerradas = true;
-            System.out.println("\n Urnas cerradas.");
-            mostrarVotantesQueNoVotaron();
         }
     }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        Scanner sc = new Scanner(System.in);
         UrnaElectoral urna = new UrnaElectoral();
 
-        boolean continuar = true;
-        while (continuar) {
-            System.out.println("\n--- MENÚ ELECTO ---");
+        while (true) {
+            System.out.println("\n=== Menú ===");
             System.out.println("1. Agregar candidato");
             System.out.println("2. Registrar votante");
-            System.out.println("3. Votar");
+            System.out.println("3. Emitir voto");
             System.out.println("4. Reportar voto");
-            System.out.println("5. Ver resultados");
-            System.out.println("6. Ver historial de votos");
-            System.out.println("7. Ver votantes que ya votaron");
-            System.out.println("8. Ver votantes que no han votado");
-            System.out.println("9. Cerrar urnas");
-            System.out.println("10. Salir");
-            System.out.print("Elige una opción: ");
-
-            int opcion = scanner.nextInt();
-            scanner.nextLine();
+            System.out.println("5. Mostrar resultados");
+            System.out.println("6. Mostrar historial de votos");
+            System.out.println("7. Mostrar votantes que han votado");
+            System.out.println("8. Mostrar votantes que no han votado");
+            System.out.println("9. Cerrar urnas y aplicar multas");
+            System.out.println("0. Salir");
+            System.out.print("Opción: ");
+            int opcion = sc.nextInt();
+            sc.nextLine(); // Limpiar buffer
 
             switch (opcion) {
                 case 1:
                     System.out.print("Nombre del candidato: ");
-                    String nombreCand = scanner.nextLine();
-                    System.out.print("Código de partido (ej: A25): ");
-                    String codigoPartido = scanner.nextLine();
-                    int id = urna.obtenerResultados().size() + 1;
-                    urna.agregarCandidato(new Candidato(id, nombreCand, codigoPartido));
+                    String nombre = sc.nextLine();
+                    System.out.print("Código del partido (ej: A25): ");
+                    String partido = sc.nextLine();
+                    urna.agregarCandidato(new Candidato(urna.listaCandidatos.size() + 1, nombre, partido));
                     break;
                 case 2:
-                    System.out.print("Nombre del votante: ");
-                    String nombreVotante = scanner.nextLine();
                     System.out.print("RUT del votante: ");
-                    String rut = scanner.nextLine();
+                    String rut = sc.nextLine();
+                    System.out.print("Nombre del votante: ");
+                    String nombreVotante = sc.nextLine();
                     urna.registrarVotante(new Votante(rut, nombreVotante));
                     break;
                 case 3:
                     System.out.print("RUT del votante: ");
-                    String rutVoto = scanner.nextLine();
-                    System.out.print("Código del partido a votar: ");
-                    String codigoVoto = scanner.nextLine();
-                    if (!urna.registrarVoto(rutVoto, codigoVoto))
-                        System.out.println("Error al registrar el voto (verifica datos o ya votó / urnas cerradas).");
+                    String rutV = sc.nextLine();
+                    System.out.print("Código del partido: ");
+                    String codPartido = sc.nextLine();
+                    urna.registrarVoto(rutV, codPartido);
                     break;
                 case 4:
                     System.out.print("Código de votación a reportar: ");
-                    String codigoReportar = scanner.nextLine();
-                    urna.reportarVoto(codigoReportar);
+                    String cod = sc.nextLine();
+                    urna.reportarVoto(cod);
                     break;
                 case 5:
                     urna.mostrarResultados();
@@ -339,55 +342,15 @@ public class Electo {
                     urna.mostrarVotantesQueNoVotaron();
                     break;
                 case 9:
-
                     urna.cerrarUrnas();
                     break;
-                case 10:
-                    continuar = false;
-                    break;
+                case 0:
+                    System.out.println(" Saliendo...");
+                    return;
                 default:
-                    System.out.println("Opción no válida.");
+                    System.out.println(" Opción inválida.");
             }
         }
-        scanner.close();
-    }
-}
-
-static class Voto {
-    private int id;                 // 4 bytes
-    private long rutVotante;        // 8 bytes (almacenar 123456789 en lugar de "12.345.678-9")
-    private short codigoPartido;    // 2 bytes (por ejemplo, codificar "A25B12" como un número)
-    private long timestamp;         // 8 bytes (almacenar segundos desde medianoche)
-
-    public Voto(int id, long rutVotante, short codigoPartido) {
-        this.id = id;
-        this.rutVotante = rutVotante;
-        this.codigoPartido = codigoPartido;
-        this.timestamp = System.currentTimeMillis() / 1000; // Almacena segundos desde la época
     }
 
-    public int getId() { return id; }
-    public long getRutVotante() { return rutVotante; }
-    public short getCodigoPartido() { return codigoPartido; }
-    public long getTimestamp() { return timestamp; }
-
-    // Método para reconstruir el RUT con formato
-    public String getRutVotanteFormatted() {
-        String rut = String.valueOf(rutVotante);
-        return rut.substring(0, 2) + "." + rut.substring(2, 5) + "." + rut.substring(5, 8) + "-" + rut.charAt(rut.length() - 1);
-    }
-
-    // Método para convertir timestamp a formato HH:MM:SS
-    public String getTimestampFormatted() {
-        long hours = (timestamp / 3600) % 24;
-        long minutes = (timestamp / 60) % 60;
-        long seconds = timestamp % 60;
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-    }
-
-    @Override
-    public String toString() {
-        return "Voto{id=" + id + ", rut='" + getRutVotanteFormatted() + "', partido='" + codigoPartido +
-                "', hora='" + getTimestampFormatted() + "'}";
-    }
 }
