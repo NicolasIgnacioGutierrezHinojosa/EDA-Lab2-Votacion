@@ -1,3 +1,4 @@
+//En este codigo ningun animal ha sido maltratado y ningun do while ha sido utlizado.
 import java.time.LocalTime;
 import java.util.*;
 
